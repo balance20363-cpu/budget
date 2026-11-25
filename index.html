@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>14,000 倒數記帳</title>
+
+  <!-- iOS PWA 專屬設定：加入主畫面後全螢幕原生體驗 -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="倒數記帳" />
+  <meta name="theme-color" content="#FAF8F5" />
+
+  <!-- SVG 圖示與動態 PWA Manifest（不使用 base64） -->
+  <link id="favicon-link" rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23A7F3D0'/%3E%3Crect x='14' y='14' width='152' height='152' rx='30' fill='%23FAF8F5' stroke='%231E293B' stroke-width='8'/%3E%3Ctext x='90' y='88' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='44' fill='%231E293B'%3E14K%3C/text%3E%3Crect x='36' y='112' width='108' height='22' rx='11' fill='%23BAE6FD' stroke='%231E293B' stroke-width='6'/%3E%3Crect x='36' y='112' width='72' height='22' rx='11' fill='%23A7F3D0' stroke='%231E293B' stroke-width='6'/%3E%3C/svg%3E" />
+  <link id="apple-touch-icon-link" rel="apple-touch-icon" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23A7F3D0'/%3E%3Crect x='16' y='16' width='148' height='148' rx='32' fill='%23FAF8F5' stroke='%231E293B' stroke-width='8'/%3E%3Ctext x='90' y='90' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='44' fill='%231E293B'%3E14K%3C/text%3E%3Crect x='36' y='114' width='108' height='22' rx='11' fill='%23BAE6FD' stroke='%231E293B' stroke-width='6'/%3E%3Crect x='36' y='114' width='72' height='22' rx='11' fill='%23A7F3D0' stroke='%231E293B' stroke-width='6'/%3E%3C/svg%3E" />
+  <link rel="manifest" href="data:application/manifest+json;utf8,%7B%22name%22%3A%2214%2C000%20%E5%80%92%E6%95%B8%E8%A8%98%E5%B8%B3%22%2C%22short_name%22%3A%22%E5%80%92%E6%95%B8%E8%A8%98%E5%B8%B3%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23FAF8F5%22%2C%22theme_color%22%3A%22%23FAF8F5%22%7D" />
+
+  <!-- 字型：Noto Sans TC 搭配圓體系統回退 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream: '#FAF8F5',
+            ink: '#1E293B',
+            mint: '#A7F3D0',
+            sky: '#BAE6FD',
+            goose: '#FEF08A',
+            coral: '#FCA5A5',
+            apricot: '#FED7AA'
+          },
+          fontFamily: {
+            sans: ['"SF Pro Rounded"', 'ui-rounded', '"Noto Sans TC"', '"PingFang TC"', '"Microsoft JhengHei"', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* 基礎安全區域與觸控優化（專為 iPhone 16 設計） */
+    :root {
+      --ink: #1E293B;
+      --cream: #FAF8F5;
+    }
+
+    html, body {
+      background-color: var(--cream);
+      color: var(--ink);
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: none;
+    }
+
+    body {
+      padding-top: max(12px, env(safe-area-inset-top));
+      padding-bottom: max(96px, calc(env(safe-area-inset-bottom) + 72px));
+      background-image: radial-gradient(#E2DFD7 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    /* 等寬數字，避免金額變動時左右抖動 */
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Pastel Neo-Brutalism 卡片與按鈕硬陰影 */
+    .neo-card {
+      border: 2px solid var(--ink);
+      box-shadow: 3px 3px 0px var(--ink);
+    }
+
+    .neo-card-lg {
+      border: 2px solid var(--ink);
+      box-shadow: 4px 4px 0px var(--ink);
+    }
+
+    .neo-btn {
+      border: 2px solid var(--ink);
+      box-shadow: 3px 3px 0px var(--ink);
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease;
+      touch-action: manipulation;
+    }
+
+    .neo-btn:active:not(:disabled) {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0px var(--ink);
+    }
+
+    .neo-btn:disabled {
+      opacity: 0.4;
+      box-shadow: 1px 1px 0px var(--ink);
+      cursor: not-allowed;
+    }
+
+    .neo-pill {
+      border: 2px solid var(--ink);
+      box-shadow: 2px 2px 0px var(--ink);
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.12s ease;
+      touch-action: manipulation;
+    }
+
+    .neo-pill:active {
+      transform: translate(1.5px, 1.5px);
+      box-shadow: 0.5px 0.5px 0px var(--ink);
+    }
+
+    .neo-pill-active {
+      background-color: #BAE6FD !important;
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0px var(--ink);
+    }
+
+    /* 進度條平滑過渡 */
+    .progress-fill {
+      transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.3s ease;
+    }
+
+    /* 彈窗與吐司動畫 */
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(18px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .animate-modal {
+      animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .animate-backdrop {
+      animation: fadeIn 0.16s ease forwards;
+    }
+
+    /* 隱藏原生日期選擇器圖示，改由自訂外層標籤呈現 */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    /* 隱藏捲軸但維持流暢滑動 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased selection:bg-sky selection:text-ink overflow-x-hidden">
+
+  <!-- 主容器：桌面預覽居中 460px，iPhone 16 滿版原生感 -->
+  <main class="max-w-[460px] mx-auto px-4 space-y-4">
+
+    <!-- 1. 頂部月份切換列與設定按鈕 -->
+    <header class="flex items-center justify-between pt-1">
+      <!-- 月份切換器 -->
+      <div class="flex items-center gap-2">
+        <button id="prev-month-btn" type="button" aria-label="上個月"
+          class="neo-btn w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-ink">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.6" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        <button id="month-label-btn" type="button" title="點擊回到本月"
+          class="neo-btn h-10 px-4 rounded-2xl bg-white flex items-center gap-1.5 font-bold text-[15px] tracking-wide">
+          <span id="current-month-text">2026年 11月</span>
+          <span id="back-to-today-badge" class="hidden text-[11px] bg-goose border border-ink px-1.5 py-0.5 rounded-lg font-bold">回本月</span>
+        </button>
+
+        <button id="next-month-btn" type="button" aria-label="下個月"
+          class="neo-btn w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-ink">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.6" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- 設定齒輪按鈕 -->
+      <button id="open-settings-btn" type="button" aria-label="設定與資料備份"
+        class="neo-btn w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-ink">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </button>
+    </header>
+
+    <!-- 2. 倒數餘額主視覺卡片 (Hero Card) -->
+    <section id="hero-card" class="neo-card-lg rounded-[22px] p-5 bg-[#ECFDF5] transition-colors duration-300">
+      <!-- 卡片頂部標籤與狀態膠囊 -->
+      <div class="flex items-center justify-between gap-2 mb-1">
+        <div class="flex items-center gap-2">
+          <span id="hero-title-label" class="text-sm font-bold text-ink/80">本月剩餘</span>
+          <span id="hero-budget-hint" class="text-xs font-bold text-ink/60 bg-white/75 border border-ink/20 px-2 py-0.5 rounded-full tabular-nums">
+            預算 $14,000
+          </span>
+        </div>
+        <span id="status-badge" class="text-xs font-bold px-2.5 py-1 rounded-full border-2 border-ink bg-mint text-ink">
+          預算充裕 ✨
+        </span>
+      </div>
+
+      <!-- 超大剩餘金額數字 -->
+      <div class="my-2 flex items-baseline gap-1.5">
+        <span id="remaining-amount" class="text-[46px] leading-none font-black tracking-tight tabular-nums text-ink">
+          $14,000
+        </span>
+      </div>
+
+      <!-- 水平倒數進度條 -->
+      <div class="mt-3 mb-4">
+        <div class="flex items-center justify-between text-xs font-bold mb-1.5">
+          <span id="progress-label-left" class="text-ink/75">剩餘額度</span>
+          <span id="progress-percent" class="tabular-nums text-ink">100%</span>
+        </div>
+        <div class="w-full h-4 bg-white rounded-full border-2 border-ink overflow-hidden p-[1px]">
+          <div id="progress-bar-fill" class="progress-fill h-full rounded-full bg-mint" style="width: 100%;"></div>
+        </div>
+      </div>
+
+      <!-- 三欄精簡數據總覽 -->
+      <div class="grid grid-cols-3 gap-2.5">
+        <!-- 已花費 -->
+        <div class="bg-white/90 border-2 border-ink rounded-2xl p-2.5 text-center">
+          <div class="text-[11px] font-bold text-ink/65">已花費</div>
+          <div id="stat-spent" class="text-[16px] font-black tabular-nums mt-0.5 text-ink">$0</div>
+          <div id="stat-spent-sub" class="text-[10px] font-bold text-ink/50 mt-0.5">0 筆</div>
+        </div>
+
+        <!-- 今日花費 (歷史月份顯示當月筆數或單筆平均) -->
+        <div class="bg-white/90 border-2 border-ink rounded-2xl p-2.5 text-center">
+          <div id="stat-today-label" class="text-[11px] font-bold text-ink/65">今日花費</div>
+          <div id="stat-today" class="text-[16px] font-black tabular-nums mt-0.5 text-ink">$0</div>
+          <div id="stat-today-sub" class="text-[10px] font-bold text-ink/50 mt-0.5">今天</div>
+        </div>
+
+        <!-- 剩餘日均 -->
+        <div class="bg-white/90 border-2 border-ink rounded-2xl p-2.5 text-center">
+          <div id="stat-daily-label" class="text-[11px] font-bold text-ink/65">剩餘日均</div>
+          <div id="stat-daily" class="text-[16px] font-black tabular-nums mt-0.5 text-ink">$0</div>
+          <div id="stat-daily-sub" class="text-[10px] font-bold text-ink/50 mt-0.5">含今日</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 極速記帳輸入卡 (專為 iPhone 單手拇指操作優化) -->
+    <section class="neo-card rounded-[22px] bg-white p-4">
+      <form id="expense-form" class="space-y-3.5" autocomplete="off">
+        <!-- 大字金額輸入欄（字體 30px 防止 iOS Safari 自動縮放，inputmode="numeric" 秒開純數字鍵盤） -->
+        <div>
+          <label for="amount-input" class="sr-only">花費金額</label>
+          <div class="relative flex items-center bg-cream border-2 border-ink rounded-2xl px-3.5 py-2.5 focus-within:bg-white focus-within:ring-2 focus-within:ring-sky transition-colors">
+            <span class="text-lg font-black text-ink/55 mr-2 select-none">NT$</span>
+            <input
+              id="amount-input"
+              type="text"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              placeholder="0"
+              maxlength="7"
+              class="w-full bg-transparent text-[30px] leading-tight font-black tabular-nums text-ink placeholder:text-ink/25 focus:outline-none"
+            />
+            <!-- 清除金額小按鈕（有輸入時顯示） -->
+            <button id="clear-amount-btn" type="button" aria-label="清除金額"
+              class="hidden ml-2 w-7 h-7 rounded-full bg-ink/10 text-ink/70 flex items-center justify-center text-sm font-bold shrink-0">
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <!-- 一鍵分類膠囊（可點選或取消，不強制選擇） -->
+        <div>
+          <div id="category-pills" class="flex flex-wrap gap-2" role="group" aria-label="消費分類">
+            <!-- 由 JS 動態產生 7 個分類按鈕 -->
+          </div>
+        </div>
+
+        <!-- 簡短備註 + 精簡日期選擇器（預設今天） -->
+        <div class="flex items-center gap-2">
+          <div class="flex-1">
+            <label for="note-input" class="sr-only">備註</label>
+            <input
+              id="note-input"
+              type="text"
+              maxlength="30"
+              placeholder="備註（選填，如：超商拿鐵）"
+              class="w-full h-11 px-3.5 rounded-2xl bg-cream border-2 border-ink text-[16px] font-medium text-ink placeholder:text-ink/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky"
+            />
+          </div>
+
+          <!-- 精簡日期選擇器：不佔空間，點一下即可補記過去日期 -->
+          <div class="relative shrink-0">
+            <div id="date-display-pill"
+              class="h-11 px-3 rounded-2xl bg-cream border-2 border-ink flex items-center gap-1 text-sm font-bold text-ink select-none">
+              <span class="text-base leading-none">📅</span>
+              <span id="date-display-text" class="tabular-nums">今天</span>
+            </div>
+            <input
+              id="date-input"
+              type="date"
+              aria-label="消費日期"
+              class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
+          </div>
+        </div>
+
+        <!-- 主行動按鈕：扣款記一筆 -->
+        <button id="submit-expense-btn" type="submit"
+          class="neo-btn w-full h-12 rounded-2xl bg-mint hover:bg-[#86EFAC] text-ink font-black text-[17px] tracking-wide flex items-center justify-center gap-2">
+          <span>扣款記一筆</span>
+          <span class="text-lg leading-none">💸</span>
+        </button>
+      </form>
+    </section>
+
+    <!-- 4. 本月明細與分類統計 -->
+    <section class="space-y-3 pt-1">
+      <div class="flex items-center justify-between px-1">
+        <div class="flex items-center gap-2">
+          <h2 class="text-[16px] font-black text-ink">花費明細</h2>
+          <span id="list-count-badge" class="text-xs font-bold bg-white border-2 border-ink px-2 py-0.5 rounded-full tabular-nums">
+            0 筆
+          </span>
+        </div>
+
+        <!-- 展開／收合分類小計按鈕 -->
+        <button id="toggle-summary-btn" type="button"
+          class="hidden neo-pill px-3 py-1 rounded-full bg-white text-xs font-bold text-ink flex items-center gap-1">
+          <span>📊</span>
+          <span id="toggle-summary-text">分類統計</span>
+        </button>
+      </div>
+
+      <!-- 可收合分類統計卡片 -->
+      <div id="category-summary-card" class="hidden neo-card rounded-2xl bg-white p-3.5 space-y-2.5">
+        <div class="text-xs font-bold text-ink/65">本月各分類花費佔比</div>
+        <div id="category-summary-list" class="space-y-2"></div>
+      </div>
+
+      <!-- 依日期分組的明細清單容器 -->
+      <div id="expense-list-container" class="space-y-3.5">
+        <!-- 由 JS 動態渲染 -->
+      </div>
+    </section>
+  </main>
+
+  <!-- 浮動吐司通知（含即時復原按鈕） -->
+  <div id="toast-container" class="fixed left-1/2 -translate-x-1/2 z-50 w-[calc(100%-32px)] max-w-[428px] pointer-events-none transition-all duration-200 opacity-0 translate-y-4"
+    style="bottom: max(18px, calc(env(safe-area-inset-bottom) + 12px));">
+    <div class="neo-card rounded-2xl bg-ink text-cream px-4 py-3 flex items-center justify-between gap-3 pointer-events-auto">
+      <span id="toast-message" class="text-sm font-bold leading-snug">已扣款</span>
+      <button id="toast-undo-btn" type="button"
+        class="hidden shrink-0 px-3 py-1 rounded-xl bg-goose text-ink text-xs font-black border-2 border-cream active:scale-95 transition-transform">
+        復原
+      </button>
+    </div>
+  </div>
+
+  <!-- 編輯單筆消費 Modal -->
+  <div id="edit-modal" class="hidden fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4 bg-ink/45 backdrop-blur-[2px] animate-backdrop">
+    <div class="neo-card-lg animate-modal w-full max-w-[428px] rounded-[24px] bg-cream p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-black text-ink">編輯這筆花費</h3>
+        <button id="close-edit-modal-btn" type="button" aria-label="關閉"
+          class="neo-pill w-9 h-9 rounded-xl bg-white flex items-center justify-center font-black">✕</button>
+      </div>
+
+      <form id="edit-expense-form" class="space-y-3.5" autocomplete="off">
+        <input type="hidden" id="edit-id" />
+
+        <!-- 金額 -->
+        <div>
+          <label for="edit-amount" class="block text-xs font-bold text-ink/70 mb-1">金額 (NT$)</label>
+          <input id="edit-amount" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="7"
+            class="w-full h-12 px-3.5 rounded-2xl bg-white border-2 border-ink text-2xl font-black tabular-nums text-ink focus:outline-none focus:ring-2 focus:ring-sky" />
+        </div>
+
+        <!-- 分類 -->
+        <div>
+          <span class="block text-xs font-bold text-ink/70 mb-1.5">分類</span>
+          <div id="edit-category-pills" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- 備註 -->
+        <div>
+          <label for="edit-note" class="block text-xs font-bold text-ink/70 mb-1">備註</label>
+          <input id="edit-note" type="text" maxlength="30" placeholder="備註（選填）"
+            class="w-full h-11 px-3.5 rounded-2xl bg-white border-2 border-ink text-[16px] font-medium text-ink focus:outline-none focus:ring-2 focus:ring-sky" />
+        </div>
+
+        <!-- 日期 -->
+        <div>
+          <label for="edit-date" class="block text-xs font-bold text-ink/70 mb-1">日期</label>
+          <div class="relative">
+            <div class="w-full h-11 px-3.5 rounded-2xl bg-white border-2 border-ink flex items-center justify-between text-[16px] font-bold text-ink">
+              <span id="edit-date-display" class="tabular-nums">2026-11-25</span>
+              <span>📅</span>
+            </div>
+            <input id="edit-date" type="date" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+          </div>
+        </div>
+
+        <!-- 操作按鈕 -->
+        <div class="flex items-center gap-2.5 pt-2">
+          <button id="delete-in-modal-btn" type="button"
+            class="neo-btn h-12 px-4 rounded-2xl bg-coral text-ink font-black text-sm shrink-0">
+            刪除
+          </button>
+          <button type="submit"
+            class="neo-btn flex-1 h-12 rounded-2xl bg-sky text-ink font-black text-base">
+            儲存變更
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 設定與資料安全 Modal -->
+  <div id="settings-modal" class="hidden fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4 bg-ink/45 backdrop-blur-[2px] animate-backdrop">
+    <div class="neo-card-lg animate-modal w-full max-w-[428px] rounded-[24px] bg-cream p-5 space-y-5 max-h-[88vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-black text-ink">⚙️ 設定與資料備份</h3>
+        <button id="close-settings-btn" type="button" aria-label="關閉設定"
+          class="neo-pill w-9 h-9 rounded-xl bg-white flex items-center justify-center font-black">✕</button>
+      </div>
+
+      <!-- 1. 每月預算設定 -->
+      <div class="neo-card rounded-2xl bg-white p-4 space-y-2.5">
+        <label for="budget-setting-input" class="block text-sm font-black text-ink">每月倒數預算（NT$）</label>
+        <p class="text-xs font-medium text-ink/65">修改後將套用於目前檢視的月份及未來新月份，歷史月份紀錄不受影響。</p>
+        <div class="flex gap-2">
+          <input id="budget-setting-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="7"
+            class="flex-1 h-11 px-3.5 rounded-xl bg-cream border-2 border-ink text-lg font-black tabular-nums text-ink focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky" />
+          <button id="save-budget-btn" type="button"
+            class="neo-btn h-11 px-4 rounded-xl bg-mint text-ink font-black text-sm shrink-0">
+            儲存
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. 加入 iPhone 主畫面提示（非獨立模式時顯示） -->
+      <div id="ios-install-tip" class="rounded-2xl bg-sky/40 border-2 border-ink p-3.5 text-xs leading-relaxed text-ink space-y-1">
+        <div class="font-black text-sm">📱 變成 iPhone 專屬 App</div>
+        <p class="font-medium">在 Safari 點選底部中間的「分享」圖示 ⬆️，往下滑點選<strong>「加入主畫面」</strong>，就能從桌面直接全螢幕開啟記帳！</p>
+      </div>
+
+      <!-- 3. 資料備份與匯出 -->
+      <div class="neo-card rounded-2xl bg-white p-4 space-y-3">
+        <div>
+          <div class="text-sm font-black text-ink">資料備份與匯出</div>
+          <p class="text-xs font-medium text-ink/65 mt-0.5">資料儲存在你的 iPhone 瀏覽器本機，建議定期備份以免清除快取後遺失。</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <button id="export-csv-btn" type="button"
+            class="neo-btn h-11 px-3 rounded-xl bg-goose text-ink font-black text-xs flex items-center justify-center gap-1.5">
+            <span>📑</span><span>匯出 CSV 帳本</span>
+          </button>
+          <button id="export-json-btn" type="button"
+            class="neo-btn h-11 px-3 rounded-xl bg-sky text-ink font-black text-xs flex items-center justify-center gap-1.5">
+            <span>💾</span><span>下載 JSON 備份</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <button id="copy-json-btn" type="button"
+            class="neo-btn h-11 px-3 rounded-xl bg-cream text-ink font-bold text-xs flex items-center justify-center gap-1.5">
+            <span>📋</span><span>複製備份碼</span>
+          </button>
+          <label for="import-json-file"
+            class="neo-btn h-11 px-3 rounded-xl bg-cream text-ink font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer">
+            <span>📂</span><span>匯入 JSON 檔</span>
+            <input id="import-json-file" type="file" accept="application/json,.json" class="hidden" />
+          </label>
+        </div>
+
+        <!-- 貼上 JSON 備份碼還原（方便手機直接貼上） -->
+        <div class="pt-1">
+          <button id="toggle-paste-import-btn" type="button"
+            class="text-xs font-bold text-ink/70 underline underline-offset-4">
+            或直接貼上備份碼還原...
+          </button>
+          <div id="paste-import-area" class="hidden mt-2 space-y-2">
+            <textarea id="import-json-text" rows="3" placeholder="在此貼上先前複製的 JSON 備份碼..."
+              class="w-full p-2.5 rounded-xl bg-cream border-2 border-ink text-sm font-mono text-ink focus:bg-white focus:outline-none"></textarea>
+            <button id="confirm-paste-import-btn" type="button"
+              class="neo-btn w-full h-10 rounded-xl bg-mint text-ink font-black text-xs">
+              還原貼上的備份資料
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. 重置本月紀錄（內嵌二次確認，不使用瀏覽器 confirm） -->
+      <div class="neo-card rounded-2xl bg-[#FEF2F2] p-4 space-y-2.5">
+        <div class="text-sm font-black text-ink">重置目前月份紀錄</div>
+        <p id="reset-month-desc" class="text-xs font-medium text-ink/70">清空 2026年 11月 的所有花費紀錄，餘額將恢復為預算上限（不影響其他月份）。</p>
+
+        <button id="trigger-reset-month-btn" type="button"
+          class="neo-btn w-full h-11 rounded-xl bg-coral text-ink font-black text-sm">
+          清空本月花費紀錄
+        </button>
+
+        <!-- 二次確認區塊 -->
+        <div id="reset-confirm-box" class="hidden space-y-2 pt-1">
+          <div class="text-xs font-black text-red-700">⚠️ 確定要清空這個月的所有紀錄嗎？清空後可用「復原」或備份檔救回。</div>
+          <div class="flex gap-2">
+            <button id="cancel-reset-month-btn" type="button"
+              class="neo-btn flex-1 h-10 rounded-xl bg-white text-ink font-bold text-xs">
+              取消
+            </button>
+            <button id="confirm-reset-month-btn" type="button"
+              class="neo-btn flex-1 h-10 rounded-xl bg-red-400 text-ink font-black text-xs">
+              確定清空
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * 14,000 倒數記帳 - 主應用程式邏輯
+     * ------------------------------------------------------------
+     * 設計重點：
+     * 1. 資料依 YYYY-MM 分月儲存於 localStorage，跨月自動從預算上限開始倒數。
+     * 2. 所有日期皆以使用者裝置本地時間計算（避免 UTC+8 凌晨跨日誤差）。
+     * 3. 支援即時扣款動畫、復原防誤刪、分類統計、CSV（含 BOM）與 JSON 雙備份。
+     */
+    (function () {
+      'use strict';
+
+      /* ======================== 常數與分類定義 ======================== */
+      const STORAGE_KEY = 'taichung_budget_countdown_v1';
+      const DEFAULT_BUDGET = 14000;
+
+      const CATEGORIES = [
+        { id: 'breakfast', name: '早餐', emoji: '🍳', color: '#FEF08A' },
+        { id: 'lunch',     name: '午餐', emoji: '🍱', color: '#FED7AA' },
+        { id: 'dinner',    name: '晚餐', emoji: '🍜', color: '#FCA5A5' },
+        { id: 'drink',     name: '飲料咖啡', emoji: '☕', color: '#E9D5FF' },
+        { id: 'transport', name: '交通', emoji: '🛵', color: '#BAE6FD' },
+        { id: 'daily',     name: '日用', emoji: '🛒', color: '#A7F3D0' },
+        { id: 'other',     name: '其他', emoji: '✨', color: '#E2E8F0' }
+      ];
+
+      const WEEKDAYS_ZH = ['日', '一', '二', '三', '四', '五', '六'];
+
+      /* ======================== 日期工具函式 ======================== */
+      function pad2(n) {
+        return String(n).padStart(2, '0');
+      }
+
+      /** 取得本地今日 YYYY-MM-DD */
+      function getLocalTodayStr() {
+        const now = new Date();
+        return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+      }
+
+      /** 取得本地本月 YYYY-MM */
+      function getLocalCurrentMonthKey() {
+        const now = new Date();
+        return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`;
+      }
+
+      /** 取得本地現在時間 HH:mm */
+      function getLocalTimeStr() {
+        const now = new Date();
+        return `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+      }
+
+      /** 取得指定月份總天數 */
+      function getDaysInMonth(monthKey) {
+        const [year, month] = monthKey.split('-').map(Number);
+        return new Date(year, month, 0).getDate();
+      }
+
+      /** 月份加減 offset 個月 */
+      function shiftMonthKey(monthKey, offset) {
+        const [year, month] = monthKey.split('-').map(Number);
+        const date = new Date(year, month - 1 + offset, 1);
+        return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
+      }
+
+      /** 格式化月份標籤（如：2026年 11月） */
+      function formatMonthLabel(monthKey) {
+        const [year, month] = monthKey.split('-').map(Number);
+        return `${year}年 ${month}月`;
+      }
+
+      /** 格式化日期分組標題（如：今天 · 11/25 (三)） */
+      function formatDateGroupHeader(dateStr) {
+        const todayStr = getLocalTodayStr();
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayStr = `${yesterdayDate.getFullYear()}-${pad2(yesterdayDate.getMonth() + 1)}-${pad2(yesterdayDate.getDate())}`;
+
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const dt = new Date(y, m - 1, d);
+        const wd = WEEKDAYS_ZH[dt.getDay()];
+        const md = `${m}/${d} (${wd})`;
+
+        if (dateStr === todayStr) return `今天 · ${md}`;
+        if (dateStr === yesterdayStr) return `昨天 · ${md}`;
+        return md;
+      }
+
+      /** 格式化金額（處理負數呈現為 -$350） */
+      function formatCurrency(num) {
+        const rounded = Math.round(num);
+        if (rounded < 0) {
+          return `-$${Math.abs(rounded).toLocaleString('zh-TW')}`;
+        }
+        return `$${rounded.toLocaleString('zh-TW')}`;
+      }
+
+      /** 依 ID 查詢分類物件 */
+      function getCategoryById(id) {
+        return CATEGORIES.find((c) => c.id === id) || CATEGORIES[CATEGORIES.length - 1];
+      }
+
+      /** 過濾非數字字元並回傳正整數 */
+      function parsePositiveInt(raw) {
+        const digits = String(raw || '').replace(/[^\d]/g, '');
+        if (!digits) return 0;
+        const val = parseInt(digits, 10);
+        return Number.isFinite(val) ? val : 0;
+      }
+
+      /** 防止 XSS 的安全 HTML 轉義 */
+      function escapeHtml(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      /* ======================== 應用程式狀態 ======================== */
+      let state = loadState();
+      let viewingMonthKey = getLocalCurrentMonthKey();
+      let selectedCategoryId = null; // null 表示未特別指定，送出時歸類為「其他」
+      let editSelectedCategoryId = 'other';
+      let isSummaryOpen = false;
+      let displayedRemaining = null; // 用於平滑數字倒數動畫
+      let animFrameId = null;
+      let toastTimer = null;
+      let undoCallback = null;
+
+      /* ======================== 資料存取 (localStorage) ======================== */
+      function createInitialState() {
+        return {
+          defaultBudget: DEFAULT_BUDGET,
+          monthBudgets: {},
+          expenses: {}
+        };
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return createInitialState();
+          const parsed = JSON.parse(raw);
+          return {
+            defaultBudget: typeof parsed.defaultBudget === 'number' && parsed.defaultBudget > 0
+              ? parsed.defaultBudget
+              : DEFAULT_BUDGET,
+            monthBudgets: parsed.monthBudgets && typeof parsed.monthBudgets === 'object'
+              ? parsed.monthBudgets
+              : {},
+            expenses: parsed.expenses && typeof parsed.expenses === 'object'
+              ? parsed.expenses
+              : {}
+          };
+        } catch (err) {
+          console.error('讀取本機資料失敗，已使用預設狀態：', err);
+          return createInitialState();
+        }
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (err) {
+          console.error('儲存至 localStorage 失敗：', err);
+          showToast('⚠️ 瀏覽器儲存空間受限，請定期匯出備份');
+        }
+      }
+
+      /** 取得指定月份的預算（若該月未個別設定，則使用預設預算） */
+      function getMonthBudget(monthKey) {
+        if (state.monthBudgets && typeof state.monthBudgets[monthKey] === 'number' && state.monthBudgets[monthKey] > 0) {
+          return state.monthBudgets[monthKey];
+        }
+        return state.defaultBudget;
+      }
+
+      /** 取得指定月份的花費陣列 */
+      function getMonthExpenses(monthKey) {
+        return Array.isArray(state.expenses[monthKey]) ? state.expenses[monthKey] : [];
+      }
+
+      /* ======================== DOM 元素參照 ======================== */
+      const el = {
+        prevMonthBtn: document.getElementById('prev-month-btn'),
+        nextMonthBtn: document.getElementById('next-month-btn'),
+        monthLabelBtn: document.getElementById('month-label-btn'),
+        currentMonthText: document.getElementById('current-month-text'),
+        backToTodayBadge: document.getElementById('back-to-today-badge'),
+        openSettingsBtn: document.getElementById('open-settings-btn'),
+
+        heroCard: document.getElementById('hero-card'),
+        heroTitleLabel: document.getElementById('hero-title-label'),
+        heroBudgetHint: document.getElementById('hero-budget-hint'),
+        statusBadge: document.getElementById('status-badge'),
+        remainingAmount: document.getElementById('remaining-amount'),
+        progressLabelLeft: document.getElementById('progress-label-left'),
+        progressPercent: document.getElementById('progress-percent'),
+        progressBarFill: document.getElementById('progress-bar-fill'),
+        statSpent: document.getElementById('stat-spent'),
+        statSpentSub: document.getElementById('stat-spent-sub'),
+        statTodayLabel: document.getElementById('stat-today-label'),
+        statToday: document.getElementById('stat-today'),
+        statTodaySub: document.getElementById('stat-today-sub'),
+        statDailyLabel: document.getElementById('stat-daily-label'),
+        statDaily: document.getElementById('stat-daily'),
+        statDailySub: document.getElementById('stat-daily-sub'),
+
+        expenseForm: document.getElementById('expense-form'),
+        amountInput: document.getElementById('amount-input'),
+        clearAmountBtn: document.getElementById('clear-amount-btn'),
+        categoryPills: document.getElementById('category-pills'),
+        noteInput: document.getElementById('note-input'),
+        dateInput: document.getElementById('date-input'),
+        dateDisplayText: document.getElementById('date-display-text'),
+
+        listCountBadge: document.getElementById('list-count-badge'),
+        toggleSummaryBtn: document.getElementById('toggle-summary-btn'),
+        toggleSummaryText: document.getElementById('toggle-summary-text'),
+        categorySummaryCard: document.getElementById('category-summary-card'),
+        categorySummaryList: document.getElementById('category-summary-list'),
+        expenseListContainer: document.getElementById('expense-list-container'),
+
+        toastContainer: document.getElementById('toast-container'),
+        toastMessage: document.getElementById('toast-message'),
+        toastUndoBtn: document.getElementById('toast-undo-btn'),
+
+        editModal: document.getElementById('edit-modal'),
+        closeEditModalBtn: document.getElementById('close-edit-modal-btn'),
+        editForm: document.getElementById('edit-expense-form'),
+        editId: document.getElementById('edit-id'),
+        editAmount: document.getElementById('edit-amount'),
+        editCategoryPills: document.getElementById('edit-category-pills'),
+        editNote: document.getElementById('edit-note'),
+        editDate: document.getElementById('edit-date'),
+        editDateDisplay: document.getElementById('edit-date-display'),
+        deleteInModalBtn: document.getElementById('delete-in-modal-btn'),
+
+        settingsModal: document.getElementById('settings-modal'),
+        closeSettingsBtn: document.getElementById('close-settings-btn'),
+        budgetSettingInput: document.getElementById('budget-setting-input'),
+        saveBudgetBtn: document.getElementById('save-budget-btn'),
+        iosInstallTip: document.getElementById('ios-install-tip'),
+        exportCsvBtn: document.getElementById('export-csv-btn'),
+        exportJsonBtn: document.getElementById('export-json-btn'),
+        copyJsonBtn: document.getElementById('copy-json-btn'),
+        importJsonFile: document.getElementById('import-json-file'),
+        togglePasteImportBtn: document.getElementById('toggle-paste-import-btn'),
+        pasteImportArea: document.getElementById('paste-import-area'),
+        importJsonText: document.getElementById('import-json-text'),
+        confirmPasteImportBtn: document.getElementById('confirm-paste-import-btn'),
+        resetMonthDesc: document.getElementById('reset-month-desc'),
+        triggerResetMonthBtn: document.getElementById('trigger-reset-month-btn'),
+        resetConfirmBox: document.getElementById('reset-confirm-box'),
+        cancelResetMonthBtn: document.getElementById('cancel-reset-month-btn'),
+        confirmResetMonthBtn: document.getElementById('confirm-reset-month-btn')
+      };
+
+      /* ======================== 吐司提示與復原機制 ======================== */
+      function showToast(message, onUndo = null) {
+        clearTimeout(toastTimer);
+        undoCallback = onUndo;
+        el.toastMessage.textContent = message;
+
+        if (typeof onUndo === 'function') {
+          el.toastUndoBtn.classList.remove('hidden');
+        } else {
+          el.toastUndoBtn.classList.add('hidden');
+        }
+
+        el.toastContainer.classList.remove('opacity-0', 'translate-y-4');
+        el.toastContainer.classList.add('opacity-100', 'translate-y-0');
+
+        toastTimer = setTimeout(() => {
+          hideToast();
+        }, onUndo ? 4800 : 2800);
+      }
+
+      function hideToast() {
+        clearTimeout(toastTimer);
+        undoCallback = null;
+        el.toastContainer.classList.add('opacity-0', 'translate-y-4');
+        el.toastContainer.classList.remove('opacity-100', 'translate-y-0');
+      }
+
+      el.toastUndoBtn.addEventListener('click', () => {
+        if (typeof undoCallback === 'function') {
+          const fn = undoCallback;
+          hideToast();
+          fn();
+        }
+      });
+
+      /* ======================== 數字平滑倒數動畫 ======================== */
+      function animateRemainingNumber(targetValue) {
+        if (animFrameId) cancelAnimationFrame(animFrameId);
+
+        if (displayedRemaining === null || displayedRemaining === targetValue) {
+          displayedRemaining = targetValue;
+          el.remainingAmount.textContent = formatCurrency(targetValue);
+          return;
+        }
+
+        const startValue = displayedRemaining;
+        const diff = targetValue - startValue;
+        const duration = 260;
+        const startTime = performance.now();
+
+        function step(now) {
+          const elapsed = now - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          // easeOutCubic 曲線讓數字減速停靠更自然
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const current = Math.round(startValue + diff * eased);
+          el.remainingAmount.textContent = formatCurrency(current);
+
+          if (progress < 1) {
+            animFrameId = requestAnimationFrame(step);
+          } else {
+            displayedRemaining = targetValue;
+            el.remainingAmount.textContent = formatCurrency(targetValue);
+            animFrameId = null;
+          }
+        }
+
+        animFrameId = requestAnimationFrame(step);
+      }
+
+      /* ======================== 介面渲染核心 ======================== */
+      function renderCategoryPills(container, activeId, onSelect) {
+        container.innerHTML = '';
+        CATEGORIES.forEach((cat) => {
+          const isActive = activeId === cat.id;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `neo-pill px-3 py-1.5 rounded-full text-[13px] font-bold flex items-center gap-1 select-none ${
+            isActive ? 'neo-pill-active text-ink' : 'bg-cream text-ink/90 hover:bg-white'
+          }`;
+          btn.innerHTML = `<span>${cat.emoji}</span><span>${cat.name}</span>`;
+          btn.addEventListener('click', () => onSelect(cat.id));
+          container.appendChild(btn);
+        });
+      }
+
+      function updateDateDisplayPill() {
+        const val = el.dateInput.value;
+        const todayStr = getLocalTodayStr();
+        if (!val || val === todayStr) {
+          el.dateDisplayText.textContent = '今天';
+        } else {
+          const [, m, d] = val.split('-').map(Number);
+          el.dateDisplayText.textContent = `${m}/${d}`;
+        }
+      }
+
+      /** 同步輸入表單的預設日期（切到本月為今天，切到歷史月份為該月最後一天） */
+      function syncFormDateToViewingMonth() {
+        const currentMonthKey = getLocalCurrentMonthKey();
+        if (viewingMonthKey === currentMonthKey) {
+          el.dateInput.value = getLocalTodayStr();
+        } else {
+          const lastDay = getDaysInMonth(viewingMonthKey);
+          el.dateInput.value = `${viewingMonthKey}-${pad2(lastDay)}`;
+        }
+        updateDateDisplayPill();
+      }
+
+      function renderAll(animateBalance = true) {
+        const currentMonthKey = getLocalCurrentMonthKey();
+        const isCurrentMonth = viewingMonthKey === currentMonthKey;
+        const todayStr = getLocalTodayStr();
+
+        // 1. 頂部月份列
+        el.currentMonthText.textContent = formatMonthLabel(viewingMonthKey);
+        el.backToTodayBadge.classList.toggle('hidden', isCurrentMonth);
+        el.nextMonthBtn.disabled = viewingMonthKey >= currentMonthKey;
+
+        // 2. 計算財務數據
+        const budget = getMonthBudget(viewingMonthKey);
+        const expenses = getMonthExpenses(viewingMonthKey);
+        const totalSpent = expenses.reduce((sum, item) => sum + item.amount, 0);
+        const remaining = budget - totalSpent;
+        const ratio = budget > 0 ? remaining / budget : 0;
+        const percentLeft = Math.round(ratio * 100);
+
+        // 3. 更新 Hero 卡片色彩狀態
+        let cardBg = '#ECFDF5';    // 淡薄荷（健康）
+        let barColor = '#A7F3D0';  // 薄荷綠
+        let badgeBg = '#A7F3D0';
+        let badgeText = '預算充裕 ✨';
+        let amountTextClass = 'text-ink';
+
+        if (remaining < 0) {
+          cardBg = '#FEF2F2';      // 柔和紅警示
+          barColor = '#F87171';
+          badgeBg = '#FCA5A5';
+          badgeText = '本月已超支 🚨';
+          amountTextClass = 'text-red-600';
+        } else if (ratio < 0.2) {
+          cardBg = '#FFF7ED';      // 柔和珊瑚橘
+          barColor = '#FCA5A5';
+          badgeBg = '#FCA5A5';
+          badgeText = '荷包告急 🔥';
+        } else if (ratio <= 0.5) {
+          cardBg = '#FEFCE8';      // 柔和鵝黃
+          barColor = '#FEF08A';
+          badgeBg = '#FEF08A';
+          badgeText = '花費過半囉 💛';
+        }
+
+        el.heroCard.style.backgroundColor = cardBg;
+        el.heroTitleLabel.textContent = isCurrentMonth ? '本月剩餘' : `${Number(viewingMonthKey.split('-')[1])}月結餘`;
+        el.heroBudgetHint.textContent = `預算 ${formatCurrency(budget)}`;
+        el.statusBadge.textContent = badgeText;
+        el.statusBadge.style.backgroundColor = badgeBg;
+
+        el.remainingAmount.className = `text-[46px] leading-none font-black tracking-tight tabular-nums ${amountTextClass}`;
+        if (animateBalance) {
+          animateRemainingNumber(remaining);
+        } else {
+          displayedRemaining = remaining;
+          el.remainingAmount.textContent = formatCurrency(remaining);
+        }
+
+        // 進度條
+        if (remaining < 0) {
+          const overPct = Math.round((Math.abs(remaining) / budget) * 100);
+          el.progressLabelLeft.textContent = '已超出預算';
+          el.progressPercent.textContent = `超支 ${overPct}%`;
+          el.progressBarFill.style.width = '100%';
+          el.progressBarFill.style.backgroundColor = barColor;
+        } else {
+          const clampedPct = Math.max(0, Math.min(100, ratio * 100));
+          el.progressLabelLeft.textContent = '剩餘額度';
+          el.progressPercent.textContent = `${Math.max(0, percentLeft)}%`;
+          el.progressBarFill.style.width = `${clampedPct}%`;
+          el.progressBarFill.style.backgroundColor = barColor;
+        }
+
+        // 4. 三欄精簡統計
+        el.statSpent.textContent = formatCurrency(totalSpent);
+        el.statSpentSub.textContent = `共 ${expenses.length} 筆`;
+
+        const daysInMonth = getDaysInMonth(viewingMonthKey);
+        if (isCurrentMonth) {
+          const todaySpent = expenses
+            .filter((item) => item.date === todayStr)
+            .reduce((sum, item) => sum + item.amount, 0);
+          const todayDayNum = new Date().getDate();
+          const remainingDays = Math.max(1, daysInMonth - todayDayNum + 1);
+          const dailyAllowance = remaining > 0 ? Math.floor(remaining / remainingDays) : 0;
+
+          el.statTodayLabel.textContent = '今日花費';
+          el.statToday.textContent = formatCurrency(todaySpent);
+          el.statTodaySub.textContent = `${new Date().getMonth() + 1}/${todayDayNum}`;
+
+          el.statDailyLabel.textContent = '剩餘日均';
+          el.statDaily.textContent = formatCurrency(dailyAllowance);
+          el.statDailySub.textContent = `剩 ${remainingDays} 天`;
+        } else {
+          // 歷史月份顯示：當月單筆均價 & 當月日均花費
+          const avgPerTx = expenses.length > 0 ? Math.round(totalSpent / expenses.length) : 0;
+          const avgPerDay = Math.round(totalSpent / daysInMonth);
+
+          el.statTodayLabel.textContent = '單筆平均';
+          el.statToday.textContent = formatCurrency(avgPerTx);
+          el.statTodaySub.textContent = '歷史紀錄';
+
+          el.statDailyLabel.textContent = '當月日均';
+          el.statDaily.textContent = formatCurrency(avgPerDay);
+          el.statDailySub.textContent = `共 ${daysInMonth} 天`;
+        }
+
+        // 5. 分類膠囊（新增表單）
+        const renderMainCategoryPills = () => {
+          renderCategoryPills(el.categoryPills, selectedCategoryId, (catId) => {
+            selectedCategoryId = selectedCategoryId === catId ? null : catId;
+            renderMainCategoryPills();
+          });
+        };
+        renderMainCategoryPills();
+
+        // 6. 明細清單與分類統計
+        el.listCountBadge.textContent = `${expenses.length} 筆`;
+        renderCategorySummary(expenses, totalSpent);
+        renderExpenseList(expenses);
+      }
+
+      /** 渲染分類佔比統計 */
+      function renderCategorySummary(expenses, totalSpent) {
+        if (expenses.length === 0) {
+          el.toggleSummaryBtn.classList.add('hidden');
+          el.categorySummaryCard.classList.add('hidden');
+          isSummaryOpen = false;
+          return;
+        }
+
+        el.toggleSummaryBtn.classList.remove('hidden');
+        el.toggleSummaryText.textContent = isSummaryOpen ? '收合統計' : '分類統計';
+        el.categorySummaryCard.classList.toggle('hidden', !isSummaryOpen);
+
+        if (!isSummaryOpen) return;
+
+        const totalsByCat = {};
+        expenses.forEach((item) => {
+          const cid = item.category || 'other';
+          totalsByCat[cid] = (totalsByCat[cid] || 0) + item.amount;
+        });
+
+        const sorted = Object.entries(totalsByCat)
+          .map(([cid, amount]) => ({ cat: getCategoryById(cid), amount }))
+          .sort((a, b) => b.amount - a.amount);
+
+        el.categorySummaryList.innerHTML = sorted
+          .map(({ cat, amount }) => {
+            const pct = totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0;
+            return `
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs font-bold">
+                  <span>${cat.emoji} ${cat.name}</span>
+                  <span class="tabular-nums">${formatCurrency(amount)} <span class="text-ink/50">(${pct}%)</span></span>
+                </div>
+                <div class="w-full h-2.5 bg-cream rounded-full border border-ink overflow-hidden">
+                  <div class="h-full rounded-full" style="width: ${pct}%; background-color: ${cat.color};"></div>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+      }
+
+      /** 渲染依日期分組的明細清單 */
+      function renderExpenseList(expenses) {
+        if (expenses.length === 0) {
+          el.expenseListContainer.innerHTML = `
+            <div class="neo-card rounded-[22px] bg-white px-5 py-9 text-center space-y-2.5">
+              <div class="mx-auto w-16 h-16 rounded-2xl bg-cream border-2 border-ink flex items-center justify-center text-3xl shadow-[2px_2px_0px_#1E293B]">
+                🐷
+              </div>
+              <div class="text-[15px] font-black text-ink">這個月還沒有花費紀錄</div>
+              <p class="text-xs font-medium text-ink/60 leading-relaxed">
+                在上方輸入金額並按下「扣款記一筆」，<br />立刻從 ${formatCurrency(getMonthBudget(viewingMonthKey))} 開始倒數！
+              </p>
+            </div>
+          `;
+          return;
+        }
+
+        // 依日期分組並由新到舊排序
+        const groups = {};
+        expenses.forEach((item) => {
+          if (!groups[item.date]) groups[item.date] = [];
+          groups[item.date].push(item);
+        });
+
+        const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+        el.expenseListContainer.innerHTML = sortedDates
+          .map((dateStr) => {
+            // 同一天內依建立時間由新到舊排序
+            const items = groups[dateStr].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            const dayTotal = items.reduce((s, x) => s + x.amount, 0);
+
+            const rowsHtml = items
+              .map((item) => {
+                const cat = getCategoryById(item.category);
+                const hasNote = Boolean(item.note && item.note.trim());
+                const title = hasNote ? escapeHtml(item.note.trim()) : cat.name;
+                const subText = hasNote
+                  ? `${cat.name} · ${escapeHtml(item.time || '')}`
+                  : `${escapeHtml(item.time || '')}`;
+
+                return `
+                  <div class="expense-row flex items-center justify-between gap-2.5 px-3.5 py-3 hover:bg-cream/70 active:bg-cream transition-colors cursor-pointer"
+                       data-id="${escapeHtml(item.id)}">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                      <div class="w-10 h-10 rounded-xl border-2 border-ink flex items-center justify-center text-lg shrink-0"
+                           style="background-color: ${cat.color};">
+                        ${cat.emoji}
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <div class="text-[15px] font-bold text-ink truncate">${title}</div>
+                        <div class="text-[11px] font-bold text-ink/50 tabular-nums">${subText}</div>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                      <span class="text-[16px] font-black tabular-nums text-ink">-${formatCurrency(item.amount)}</span>
+                      <button type="button" aria-label="刪除此筆" data-delete-id="${escapeHtml(item.id)}"
+                        class="quick-delete-btn w-8 h-8 rounded-xl bg-cream hover:bg-coral/60 border border-ink/25 flex items-center justify-center text-ink/60 hover:text-ink transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                `;
+              })
+              .join('<div class="h-[1.5px] bg-ink/10 mx-3.5"></div>');
+
+            return `
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between px-1.5">
+                  <span class="text-xs font-black text-ink/70">${formatDateGroupHeader(dateStr)}</span>
+                  <span class="text-xs font-black tabular-nums text-ink/70">-${formatCurrency(dayTotal)}</span>
+                </div>
+                <div class="neo-card rounded-2xl bg-white overflow-hidden">
+                  ${rowsHtml}
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+      }
+
+      /* ======================== 消費新增、編輯、刪除邏輯 ======================== */
+      function addExpense({ amount, category, note, date }) {
+        const monthKey = date.slice(0, 7);
+        if (!Array.isArray(state.expenses[monthKey])) {
+          state.expenses[monthKey] = [];
+        }
+
+        const newItem = {
+          id: `exp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          amount,
+          category: category || 'other',
+          note: (note || '').trim(),
+          date,
+          time: getLocalTimeStr(),
+          createdAt: Date.now()
+        };
+
+        state.expenses[monthKey].push(newItem);
+        saveState();
+
+        // 若補記的是別的月份，自動切換過去讓使用者看到結果
+        const switchedMonth = monthKey !== viewingMonthKey;
+        if (switchedMonth) {
+          viewingMonthKey = monthKey;
+          displayedRemaining = null;
+        }
+
+        renderAll(true);
+
+        const budget = getMonthBudget(monthKey);
+        const totalSpent = getMonthExpenses(monthKey).reduce((s, x) => s + x.amount, 0);
+        const remaining = budget - totalSpent;
+        const monthPrefix = switchedMonth ? `${formatMonthLabel(monthKey)} ` : '本月';
+
+        showToast(
+          `已扣 ${formatCurrency(amount)}，${monthPrefix}剩餘 ${formatCurrency(remaining)}`,
+          () => {
+            // 復原剛新增的那一筆
+            state.expenses[monthKey] = getMonthExpenses(monthKey).filter((x) => x.id !== newItem.id);
+            saveState();
+            renderAll(true);
+            showToast('已復原剛才的扣款');
+          }
+        );
+      }
+
+      function deleteExpenseById(monthKey, id) {
+        const list = getMonthExpenses(monthKey);
+        const index = list.findIndex((x) => x.id === id);
+        if (index === -1) return;
+
+        const [removed] = list.splice(index, 1);
+        state.expenses[monthKey] = list;
+        saveState();
+        renderAll(true);
+
+        showToast(`已刪除 ${formatCurrency(removed.amount)} 紀錄`, () => {
+          if (!Array.isArray(state.expenses[monthKey])) state.expenses[monthKey] = [];
+          state.expenses[monthKey].push(removed);
+          saveState();
+          renderAll(true);
+          showToast('已復原該筆紀錄');
+        });
+      }
+
+      function openEditModal(id) {
+        const list = getMonthExpenses(viewingMonthKey);
+        const item = list.find((x) => x.id === id);
+        if (!item) return;
+
+        el.editId.value = item.id;
+        el.editAmount.value = String(item.amount);
+        el.editNote.value = item.note || '';
+        el.editDate.value = item.date;
+        el.editDateDisplay.textContent = item.date;
+        editSelectedCategoryId = item.category || 'other';
+
+        const renderEditCats = () => {
+          renderCategoryPills(el.editCategoryPills, editSelectedCategoryId, (catId) => {
+            editSelectedCategoryId = catId;
+            renderEditCats();
+          });
+        };
+        renderEditCats();
+
+        el.editModal.classList.remove('hidden');
+      }
+
+      function closeEditModal() {
+        el.editModal.classList.add('hidden');
+      }
+
+      /* ======================== 設定與備份匯入／匯出 ======================== */
+      function openSettingsModal() {
+        el.budgetSettingInput.value = String(getMonthBudget(viewingMonthKey));
+        el.resetMonthDesc.textContent = `清空 ${formatMonthLabel(viewingMonthKey)} 的所有花費紀錄，餘額將恢復為預算上限（不影響其他月份）。`;
+        el.resetConfirmBox.classList.add('hidden');
+        el.triggerResetMonthBtn.classList.remove('hidden');
+        el.pasteImportArea.classList.add('hidden');
+        el.importJsonText.value = '';
+
+        // 若已在主畫面獨立模式開啟，隱藏安裝提示
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        el.iosInstallTip.classList.toggle('hidden', isStandalone);
+
+        el.settingsModal.classList.remove('hidden');
+      }
+
+      function closeSettingsModal() {
+        el.settingsModal.classList.add('hidden');
+      }
+
+      /** 觸發檔案下載 */
+      function downloadFile(content, filename, mimeType) {
+        try {
+          const blob = new Blob([content], { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          return true;
+        } catch (err) {
+          console.error('匯出檔案失敗：', err);
+          return false;
+        }
+      }
+
+      /** 匯出 UTF-8 with BOM CSV 檔（相容 Excel / Google Sheets） */
+      function exportCsv() {
+        const allRows = [];
+        const monthKeys = Object.keys(state.expenses).sort((a, b) => b.localeCompare(a));
+
+        monthKeys.forEach((mk) => {
+          const items = getMonthExpenses(mk);
+          items.forEach((item) => {
+            const cat = getCategoryById(item.category);
+            allRows.push({
+              month: mk,
+              date: item.date,
+              time: item.time || '',
+              category: cat.name,
+              note: item.note || '',
+              amount: item.amount
+            });
+          });
+        });
+
+        if (allRows.length === 0) {
+          showToast('目前還沒有任何花費紀錄可匯出喔');
+          return;
+        }
+
+        allRows.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+
+        const csvEscape = (v) => `"${String(v).replace(/"/g, '""')}"`;
+        const header = ['日期', '時間', '分類', '備註', '金額(NT$)', '所屬月份'];
+        const lines = [
+          header.map(csvEscape).join(','),
+          ...allRows.map((r) => [r.date, r.time, r.category, r.note, r.amount, r.month].map(csvEscape).join(','))
+        ];
+
+        // 加上 UTF-8 BOM (\uFEFF) 避免中文在 Excel 開啟變成亂碼
+        const csvContent = '\uFEFF' + lines.join('\r\n');
+        const ok = downloadFile(csvContent, `倒數記帳明細_${getLocalTodayStr()}.csv`, 'text/csv;charset=utf-8;');
+        if (ok) showToast('📑 已匯出 CSV 帳本');
+      }
+
+      /** 匯出完整 JSON 備份 */
+      function exportJson() {
+        const payload = JSON.stringify({
+          app: '14000-budget-countdown',
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          data: state
+        }, null, 2);
+
+        const ok = downloadFile(payload, `倒數記帳備份_${getLocalTodayStr()}.json`, 'application/json;charset=utf-8;');
+        if (ok) showToast('💾 已下載 JSON 備份檔');
+      }
+
+      /** 複製 JSON 備份碼（使用 execCommand 相容 iFrame 與 iOS Safari） */
+      function copyJsonToClipboard() {
+        const payload = JSON.stringify({
+          app: '14000-budget-countdown',
+          version: 1,
+          data: state
+        });
+
+        const textarea = document.createElement('textarea');
+        textarea.value = payload;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        textarea.style.top = '0';
+        textarea.style.left = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        textarea.setSelectionRange(0, payload.length);
+
+        let copied = false;
+        try {
+          copied = document.execCommand('copy');
+        } catch (err) {
+          console.error('複製失敗：', err);
+        }
+        document.body.removeChild(textarea);
+
+        if (copied) {
+          showToast('📋 已複製 JSON 備份碼，可貼到備忘錄保存');
+        } else {
+          showToast('⚠️ 無法自動複製，請改用「下載 JSON 備份」');
+        }
+      }
+
+      /** 驗證並匯入 JSON 備份資料 */
+      function importJsonString(rawText) {
+        try {
+          const parsed = JSON.parse(rawText);
+          const dataObj = parsed && parsed.data ? parsed.data : parsed;
+
+          if (!dataObj || typeof dataObj !== 'object' || typeof dataObj.expenses !== 'object') {
+            throw new Error('格式不符');
+          }
+
+          const backupBeforeImport = JSON.parse(JSON.stringify(state));
+
+          state = {
+            defaultBudget: typeof dataObj.defaultBudget === 'number' && dataObj.defaultBudget > 0
+              ? dataObj.defaultBudget
+              : DEFAULT_BUDGET,
+            monthBudgets: dataObj.monthBudgets && typeof dataObj.monthBudgets === 'object'
+              ? dataObj.monthBudgets
+              : {},
+            expenses: dataObj.expenses
+          };
+
+          saveState();
+          closeSettingsModal();
+          renderAll(true);
+
+          showToast('✅ 備份資料還原成功！', () => {
+            state = backupBeforeImport;
+            saveState();
+            renderAll(true);
+            showToast('已還原為匯入前的資料');
+          });
+        } catch (err) {
+          showToast('❌ 備份格式不正確，請確認內容是否完整');
+        }
+      }
+
+      /* ======================== 事件監聽綁定 ======================== */
+
+      // 月份切換
+      el.prevMonthBtn.addEventListener('click', () => {
+        viewingMonthKey = shiftMonthKey(viewingMonthKey, -1);
+        displayedRemaining = null;
+        syncFormDateToViewingMonth();
+        renderAll(false);
+      });
+
+      el.nextMonthBtn.addEventListener('click', () => {
+        const currentMonthKey = getLocalCurrentMonthKey();
+        if (viewingMonthKey >= currentMonthKey) return;
+        viewingMonthKey = shiftMonthKey(viewingMonthKey, 1);
+        displayedRemaining = null;
+        syncFormDateToViewingMonth();
+        renderAll(false);
+      });
+
+      el.monthLabelBtn.addEventListener('click', () => {
+        const currentMonthKey = getLocalCurrentMonthKey();
+        if (viewingMonthKey === currentMonthKey) return;
+        viewingMonthKey = currentMonthKey;
+        displayedRemaining = null;
+        syncFormDateToViewingMonth();
+        renderAll(false);
+      });
+
+      // 金額欄輸入淨化（只保留數字）
+      el.amountInput.addEventListener('input', () => {
+        const cleaned = el.amountInput.value.replace(/[^\d]/g, '');
+        el.amountInput.value = cleaned;
+        el.clearAmountBtn.classList.toggle('hidden', cleaned.length === 0);
+      });
+
+      el.clearAmountBtn.addEventListener('click', () => {
+        el.amountInput.value = '';
+        el.clearAmountBtn.classList.add('hidden');
+        el.amountInput.focus();
+      });
+
+      el.dateInput.addEventListener('change', updateDateDisplayPill);
+
+      // 送出扣款表單
+      el.expenseForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const amount = parsePositiveInt(el.amountInput.value);
+        if (amount <= 0) {
+          showToast('請先輸入花費金額喔 ✍️');
+          el.amountInput.focus();
+          return;
+        }
+
+        const date = el.dateInput.value || getLocalTodayStr();
+        const note = el.noteInput.value.trim();
+
+        addExpense({
+          amount,
+          category: selectedCategoryId || 'other',
+          note,
+          date
+        });
+
+        // 清空輸入欄，準備下一筆快速輸入
+        el.amountInput.value = '';
+        el.clearAmountBtn.classList.add('hidden');
+        el.noteInput.value = '';
+        selectedCategoryId = null;
+        // 收起手機鍵盤讓使用者清楚看到餘額倒數變化
+        el.amountInput.blur();
+        el.noteInput.blur();
+        renderAll(true);
+      });
+
+      // 分類統計收合
+      el.toggleSummaryBtn.addEventListener('click', () => {
+        isSummaryOpen = !isSummaryOpen;
+        renderAll(false);
+      });
+
+      // 明細列點擊（編輯）與快捷刪除按鈕事件委派
+      el.expenseListContainer.addEventListener('click', (e) => {
+        const deleteBtn = e.target.closest('.quick-delete-btn');
+        if (deleteBtn) {
+          e.stopPropagation();
+          const id = deleteBtn.getAttribute('data-delete-id');
+          deleteExpenseById(viewingMonthKey, id);
+          return;
+        }
+
+        const row = e.target.closest('.expense-row');
+        if (row) {
+          const id = row.getAttribute('data-id');
+          openEditModal(id);
+        }
+      });
+
+      // 編輯 Modal 事件
+      el.closeEditModalBtn.addEventListener('click', closeEditModal);
+      el.editModal.addEventListener('click', (e) => {
+        if (e.target === el.editModal) closeEditModal();
+      });
+
+      el.editAmount.addEventListener('input', () => {
+        el.editAmount.value = el.editAmount.value.replace(/[^\d]/g, '');
+      });
+
+      el.editDate.addEventListener('change', () => {
+        el.editDateDisplay.textContent = el.editDate.value || getLocalTodayStr();
+      });
+
+      el.deleteInModalBtn.addEventListener('click', () => {
+        const id = el.editId.value;
+        closeEditModal();
+        deleteExpenseById(viewingMonthKey, id);
+      });
+
+      el.editForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = el.editId.value;
+        const newAmount = parsePositiveInt(el.editAmount.value);
+        if (newAmount <= 0) {
+          showToast('金額必須大於 0 喔');
+          el.editAmount.focus();
+          return;
+        }
+
+        const newDate = el.editDate.value || getLocalTodayStr();
+        const newMonthKey = newDate.slice(0, 7);
+        const newNote = el.editNote.value.trim();
+
+        const oldList = getMonthExpenses(viewingMonthKey);
+        const idx = oldList.findIndex((x) => x.id === id);
+        if (idx === -1) {
+          closeEditModal();
+          return;
+        }
+
+        const updatedItem = {
+          ...oldList[idx],
+          amount: newAmount,
+          category: editSelectedCategoryId || 'other',
+          note: newNote,
+          date: newDate
+        };
+
+        if (newMonthKey === viewingMonthKey) {
+          oldList[idx] = updatedItem;
+        } else {
+          // 日期改到別的月份時自動搬移分桶
+          oldList.splice(idx, 1);
+          if (!Array.isArray(state.expenses[newMonthKey])) state.expenses[newMonthKey] = [];
+          state.expenses[newMonthKey].push(updatedItem);
+        }
+
+        saveState();
+        closeEditModal();
+        renderAll(true);
+        showToast('✅ 已更新這筆花費');
+      });
+
+      // 設定 Modal 事件
+      el.openSettingsBtn.addEventListener('click', openSettingsModal);
+      el.closeSettingsBtn.addEventListener('click', closeSettingsModal);
+      el.settingsModal.addEventListener('click', (e) => {
+        if (e.target === el.settingsModal) closeSettingsModal();
+      });
+
+      el.budgetSettingInput.addEventListener('input', () => {
+        el.budgetSettingInput.value = el.budgetSettingInput.value.replace(/[^\d]/g, '');
+      });
+
+      el.saveBudgetBtn.addEventListener('click', () => {
+        const newBudget = parsePositiveInt(el.budgetSettingInput.value);
+        if (newBudget <= 0) {
+          showToast('請輸入大於 0 的預算金額');
+          return;
+        }
+
+        const currentMonthKey = getLocalCurrentMonthKey();
+        state.monthBudgets[viewingMonthKey] = newBudget;
+        // 若正在設定當月預算，也同步更新未來的預設月預算
+        if (viewingMonthKey === currentMonthKey) {
+          state.defaultBudget = newBudget;
+        }
+        saveState();
+        renderAll(true);
+        showToast(`✅ 本月預算已更新為 ${formatCurrency(newBudget)}`);
+      });
+
+      el.exportCsvBtn.addEventListener('click', exportCsv);
+      el.exportJsonBtn.addEventListener('click', exportJson);
+      el.copyJsonBtn.addEventListener('click', copyJsonToClipboard);
+
+      el.importJsonFile.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          importJsonString(String(reader.result || ''));
+          el.importJsonFile.value = '';
+        };
+        reader.onerror = () => {
+          showToast('❌ 讀取檔案失敗，請重試');
+          el.importJsonFile.value = '';
+        };
+        reader.readAsText(file, 'UTF-8');
+      });
+
+      el.togglePasteImportBtn.addEventListener('click', () => {
+        el.pasteImportArea.classList.toggle('hidden');
+      });
+
+      el.confirmPasteImportBtn.addEventListener('click', () => {
+        const text = el.importJsonText.value.trim();
+        if (!text) {
+          showToast('請先貼上 JSON 備份碼');
+          return;
+        }
+        importJsonString(text);
+      });
+
+      // 重置本月紀錄（二次確認流程）
+      el.triggerResetMonthBtn.addEventListener('click', () => {
+        const items = getMonthExpenses(viewingMonthKey);
+        if (items.length === 0) {
+          showToast('這個月本來就是空的喔 ✨');
+          return;
+        }
+        el.triggerResetMonthBtn.classList.add('hidden');
+        el.resetConfirmBox.classList.remove('hidden');
+      });
+
+      el.cancelResetMonthBtn.addEventListener('click', () => {
+        el.resetConfirmBox.classList.add('hidden');
+        el.triggerResetMonthBtn.classList.remove('hidden');
+      });
+
+      el.confirmResetMonthBtn.addEventListener('click', () => {
+        const monthKey = viewingMonthKey;
+        const backupMonthItems = JSON.parse(JSON.stringify(getMonthExpenses(monthKey)));
+        state.expenses[monthKey] = [];
+        saveState();
+        closeSettingsModal();
+        renderAll(true);
+
+        showToast(`已清空 ${formatMonthLabel(monthKey)} 的所有紀錄`, () => {
+          state.expenses[monthKey] = backupMonthItems;
+          saveState();
+          renderAll(true);
+          showToast('已復原清空的紀錄');
+        });
+      });
+
+      // 監聽頁面重新回到前景（若放著跨過月底，自動偵測並更新本月）
+      let lastKnownMonthKey = getLocalCurrentMonthKey();
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          const nowMonthKey = getLocalCurrentMonthKey();
+          if (nowMonthKey !== lastKnownMonthKey) {
+            lastKnownMonthKey = nowMonthKey;
+            viewingMonthKey = nowMonthKey;
+            displayedRemaining = null;
+            syncFormDateToViewingMonth();
+            renderAll(false);
+            showToast(`🎉 新月份開始！預算已自動重置為 ${formatCurrency(getMonthBudget(nowMonthKey))}`);
+          }
+        }
+      });
+
+      /* ======================== 初始化啟動 ======================== */
+      syncFormDateToViewingMonth();
+      renderAll(false);
+    })();
+  </script>
+</body>
+</html>
